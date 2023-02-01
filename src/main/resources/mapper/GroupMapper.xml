@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.hellohao.dao.GroupMapper">
+
+
+<!--    <select id="grouplist" resultType="cn.hellohao.pojo.Group">-->
+<!--        SELECT-->
+<!--        *-->
+<!--        FROM-->
+<!--        `group`-->
+<!--    </select>-->
+
+    <select id="grouplist" resultType="cn.hellohao.pojo.Group" parameterType="integer">
+        SELECT
+        g.id,g.groupname,g.keyid,g.usertype,g.compress,k.storageType,k.keyname
+        FROM
+        `group` as g LEFT JOIN `keys` as k on g.keyid = k.id
+        where 1=1
+        <if test="usertype!=null">
+            and g.usertype=#{usertype}
+        </if>
+
+    </select>
+
+
+    <select id="idgrouplist" parameterType="integer" resultType="cn.hellohao.pojo.Group">
+        SELECT
+            *
+        FROM
+            `group`
+        where id = #{id}
+    </select>
+
+    <insert id="addgroup" parameterType="cn.hellohao.pojo.Group">
+        insert into `group` (id,groupname,keyid,usertype,compress) values (null,#{groupname},#{keyid},#{usertype},#{compress})
+    </insert>
+
+    <select id="GetCountFroUserType" parameterType="integer" resultType="integer">
+        SELECT
+            count(id)
+        FROM
+            `group`
+        where usertype = #{usertype}
+    </select>
+
+    <delete id="delegroup" parameterType="integer">
+        delete from `group` where id=#{id}
+    </delete>
+
+    <update id="setgroup" parameterType="cn.hellohao.pojo.Group">
+        UPDATE `group` SET groupname=#{groupname},keyid=#{keyid},usertype=#{usertype},compress=#{compress} where id = #{id};
+    </update>
+
+    <select id="getGroupFroUserType" parameterType="integer" resultType="cn.hellohao.pojo.Group">
+        SELECT
+            *
+        FROM
+            `group`
+        where usertype = #{usertype}
+    </select>
+
+</mapper>

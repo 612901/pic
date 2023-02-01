@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.hellohao.dao.ImgMapper">
+
+    <!-- 查询-->
+    <select id="selectimg" parameterType="cn.hellohao.pojo.Images" resultType="cn.hellohao.pojo.Images">
+        SELECT
+        a.id,
+        a.imgname,
+        a.imgurl,
+        b.username,
+        a.updatetime,
+        a.sizes,
+        a.abnormal,
+        a.source,
+        a.imgtype,
+        a.explains,
+        a.md5key,
+        a.imguid,
+        a.format,
+        a.about,
+        a.violation,
+        a.idname
+        FROM
+        imgdata a
+        LEFT JOIN user b ON a.userid = b.id
+        where
+        1=1
+        <if test="source != null">
+            and
+            a.source = #{source}
+        </if>
+        <if test="starttime != null">
+            and
+            a.updatetime &gt;= #{starttime}
+        </if>
+        <if test="stoptime != null">
+            and
+            a.updatetime &lt;= #{stoptime}
+        </if>
+        <if test="violation == 'true'">
+            and
+            a.violation !=""
+        </if>
+
+        <choose>
+            <when test="userid!=null and userid!=''">
+                and
+                a.userid = #{userid}
+            </when>
+            <otherwise>
+                <if test="username != null and username != ''">
+                    <choose>
+                        <when test="selecttype==1">
+                            and
+                            a.userid in ( SELECT id  from `user` where username LIKE '%${username}%')
+                        </when>
+                        <otherwise>
+                            and
+                            a.userid not in ( SELECT id  from `user` where username LIKE '%${username}%')
+                        </otherwise>
+                    </choose>
+                </if>
+            </otherwise>
+        </choose>
+        <if test="imguid != null">
+            and
+            a.imguid = #{imguid}
+        </if>
+        <if test="idname != null and idname !=''">
+            and idname LIKE '%${idname}%'
+        </if>
+        order by a.id desc
+    </select>
+
+    <insert  id="insertImgData" parameterType="cn.hellohao.pojo.Images">
+        INSERT INTO imgdata (
+            id,
+            imgname,
+            imgurl,
+            userid,
+            updatetime,
+            sizes,
+            abnormal,
+            `source`,
+            imgtype,
+            explains,
+            md5key,
+            imguid,
+            `format`,
+            about,
+            violation,
+            idname
+        )
+        select * from (
+                          SELECT  NULL id,
+                                  #{imgname} imgname,
+                                  #{imgurl} imgurl,
+                                  #{userid} userid,
+                                  #{updatetime} updatetime,
+                                  #{sizes} sizes,
+                                  #{abnormal} abnormal,
+                                  #{source} `source`,
+                                  #{imgtype} imgtype,
+                                  #{explains} explains,
+                                  #{md5key} md5key,
+                                  #{imguid} imguid,
+                                  #{format} `format`,
+                                  #{about} about,
+                                  null violation,
+                                  #{idname} idname
+                      ) temp_t
+        where
+            IF((select (select checkduplicate from sysconfig where id =1)=1),
+               not exists (select md5key from imgdata img_t where temp_t.md5key = img_t.md5key),true)
+    </insert>
+
+
+    <!-- 此用户下总数 -->
+    <select id="countimg" parameterType="integer" resultType="integer">
+        select count(*) from imgdata where userid = #{userid}
+    </select>
+
+    <delete id="deleimg" parameterType="integer">
+        DELETE FROM imgdata WHERE id=#{id}
+    </delete>
+
+    <delete id="deleimgForImgUid" parameterType="string">
+        DELETE FROM imgdata WHERE imguid = #{imguid}
+    </delete>
+
+    <select id="selectByPrimaryKey" parameterType="integer" resultType="cn.hellohao.pojo.Images">
+        select * from imgdata where id = #{id}
+    </select>
+
+    <select id="counts" resultType="integer">
+        select count(*) from imgdata where 1=1
+        <if test="userid != null">
+            userid=#{userid}
+
+        </if>
+    </select>
+
+    <!-- 根据图片名字标记IP -->
+    <update id="setImg" parameterType="cn.hellohao.pojo.Images">
+         UPDATE imgdata
+             <set>
+                 <if test="abnormal!=null">
+                     abnormal=#{abnormal}
+                 </if>
+                 <if test="explains!=null">
+                     explains=#{explains}
+                 </if>
+                 <if test="idname!=null and idname!=''">
+                     idname=#{idname}
+                 </if>
+             </set>
+              where imgname=#{imgname}
+    </update>
+    <!-- 非法图片删除他  根据名称-->
+    <delete id="deleimgname" parameterType="string">
+        DELETE FROM imgdata WHERE imgname=#{imgname}
+    </delete>
+
+<!--    批量删除-->
+    <delete id="deleall" parameterType="integer">
+        DELETE FROM imgdata WHERE id = #{id}
+    </delete>
+
+    <select id="gettimeimg" parameterType="string" resultType="cn.hellohao.pojo.Images">
+        SELECT * from  imgdata WHERE  updatetime>=#{time}
+    </select>
+<!--查询指定用户总内存-->
+    <select id="getusermemory" parameterType="integer" resultType="long">
+        SELECT sum(sizes) as sizes FROM `imgdata` where userid = #{userid}
+    </select>
+
+    <!--  获取指定对象存储的已用空间 -->
+    <select id="getsourcememory" parameterType="integer" resultType="long">
+        SELECT sum(sizes) as sizes FROM `imgdata` where source = #{source}
+    </select>
+
+    <select id="md5Count" resultType="integer">
+        select count(id) from imgdata where md5key=#{md5key} and userid = #{userid}
+    </select>
+
+    <select id="selectImgUrlByMD5" parameterType="string" resultType="cn.hellohao.pojo.Images">
+        select imgname,imgurl from imgdata where md5key = #{md5key}
+    </select>
+
+    <!--    查询当前用户的近20条数据-->
+    <select id="RecentlyUploaded" parameterType="integer" resultType="cn.hellohao.pojo.Images">
+        select * from imgdata where userid = #{userid}  ORDER BY updatetime DESC LIMIT 20
+    </select>
+
+    <select id="RecentlyUser" resultType="cn.hellohao.pojo.User">
+        select count(i.id) as counts ,i.userid,u.username from imgdata i
+         LEFT JOIN `user` u on i.userid = u.id
+        where i.userid not in (0)
+        GROUP BY i.userid ORDER BY counts DESC LIMIT 20
+    </select>
+
+
+
+    <select id="getyyyy" parameterType="integer" resultType="string">
+        SELECT DISTINCT  YEAR(updatetime) yyyy FROM `imgdata` where
+        IFNULL(updatetime,'')
+        <if test="userid != null">
+            and userid = #{userid}
+        </if>
+    </select>
+
+
+    <select id="countByM" parameterType="cn.hellohao.pojo.Images"  resultType="cn.hellohao.pojo.Images">
+        SELECT
+        count(id) countNum,
+        MONTH(updatetime) monthNum
+        FROM
+        imgdata
+        where YEAR(updatetime)=#{yyyy}
+        <if test="userid != null">
+            and userid = #{userid}
+        </if>
+        GROUP BY
+        MONTH(updatetime)
+        ORDER BY
+        MONTH(updatetime) ASC
+
+    </select>
+
+    <select id="selectImgUrlByImgUID" parameterType="string" resultType="cn.hellohao.pojo.Images">
+        select * from imgdata where imguid = #{imguid}
+    </select>
+
+
+</mapper>
